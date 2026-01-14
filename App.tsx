@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Play, Edit3, Database, Settings, Plus, FolderOpen, BoxSelect, Palette } from 'lucide-react';
 import Playground from './components/Playground';
@@ -59,7 +58,7 @@ const App: React.FC = () => {
       <aside className="w-16 md:w-64 bg-sidebar border-r border-app flex flex-col shrink-0 z-50">
         <button 
           onClick={() => setActiveTab('playground')}
-          className="p-6 border-b border-app flex items-center gap-3 hover:bg-panel transition-colors text-left outline-none"
+          className="p-6 border-b border-app flex items-center gap-3 hover:bg-panel transition-colors text-left outline-none w-full"
         >
           <div className="bg-app-accent p-1.5 rounded-lg shadow-[0_0_15px_rgba(99,102,241,0.3)] shrink-0">
             <BoxSelect size={20} className="text-white" />

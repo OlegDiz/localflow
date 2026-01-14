@@ -1,4 +1,4 @@
-# <p align="center"><img src="https://raw.githubusercontent.com/lucide-icons/lucide/main/icons/box-select.svg" width="100" height="100" style="background: #6366f1; padding: 20px; border-radius: 24px; box-shadow: 0 12px 30px rgba(99, 102, 241, 0.4);" /><br/>LocalFlow</p>
+# <p align="center"><img src="https://cdn.jsdelivr.net/npm/lucide-static@0.462.0/icons/box-select.svg" width="100" height="100" style="background: #6366f1; padding: 20px; border-radius: 24px; filter: drop-shadow(0 12px 30px rgba(99, 102, 241, 0.4));" /><br/>LocalFlow</p>
 
 <p align="center">
   <img src="https://img.shields.io/badge/Local--First-Vision-6366f1?style=for-the-badge" />
@@ -8,7 +8,7 @@
 
 ---
 
-LocalFlow is a local-first computer vision platform built for the "efficiently lazy" engineer who knows that manual clicking is a relic of the pre-corona era. Instead of drawing thousands of boxes like a 2019-era junior, you use your GPU as a virtual intern to auto-label datasets via zero-shot vision prompts. It’s high-performance vision orchestration for developers who’d rather write one prompt than click a mouse five thousand times—privacy-first, local-only, and 100% coffee-break-free.
+LocalFlow is a local-first computer vision platform designed for rapid dataset curation and model testing. Built for the modern, efficiently-lazy engineer, it replaces the manual clicking of the pre-corona era—where you'd hire a junior to draw thousands of boxes—with local multimodal models (VLMs) that act as virtual interns. It’s for the developer who’d rather write a prompt once than click a mouse five thousand times; high-performance vision orchestration that works locally, privately, and without the need for coffee breaks or LinkedIn endorsements.
 
 ## ✨ Core Capabilities
 
