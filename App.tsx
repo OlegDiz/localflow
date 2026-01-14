@@ -57,12 +57,15 @@ const App: React.FC = () => {
     <div className={`flex h-screen overflow-hidden font-sans selection:bg-indigo-500/30 ${getThemeClass()} app-container transition-colors duration-300`}>
       {/* Sidebar */}
       <aside className="w-16 md:w-64 bg-sidebar border-r border-app flex flex-col shrink-0 z-50">
-        <div className="p-6 border-b border-app flex items-center gap-3">
-          <div className="bg-app-accent p-1.5 rounded-lg shadow-[0_0_15px_rgba(99,102,241,0.3)]">
+        <button 
+          onClick={() => setActiveTab('playground')}
+          className="p-6 border-b border-app flex items-center gap-3 hover:bg-panel transition-colors text-left outline-none"
+        >
+          <div className="bg-app-accent p-1.5 rounded-lg shadow-[0_0_15px_rgba(99,102,241,0.3)] shrink-0">
             <BoxSelect size={20} className="text-white" />
           </div>
           <span className="font-extrabold tracking-tighter text-xl hidden md:block">Local<span className="text-app-accent">Flow</span></span>
-        </div>
+        </button>
 
         <nav className="flex-1 p-4 space-y-2">
           <NavItem 

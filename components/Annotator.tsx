@@ -139,7 +139,7 @@ const Annotator: React.FC<AnnotatorProps> = ({ project, setProject }) => {
               <BrainCircuit size={20} />
             </div>
             <div>
-              <h1 className="text-sm font-bold text-app tracking-tight uppercase">Batch Auto-Studio</h1>
+              <h1 className="text-sm font-bold text-app tracking-tight uppercase">Batch Auto-Labeler</h1>
               <p className="text-[10px] text-app-muted font-mono uppercase">{project.images.length} Local Assets</p>
             </div>
           </div>
