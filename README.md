@@ -8,32 +8,44 @@
 
 ---
 
-LocalFlow is a local-first computer vision platform designed for rapid dataset curation and model testing. Built for the modern, efficiently-lazy engineer, it replaces the manual clicking of the pre-corona era—where you'd hire a junior to draw thousands of boxes—with local multimodal models (VLMs) that act as virtual interns. It’s for the developer who’d rather write a prompt once than click a mouse five thousand times; high-performance vision orchestration that works locally, privately, and without the need for coffee breaks or LinkedIn endorsements.
+LocalFlow is a local-first vision studio for the efficiently lazy. Use local VLMs as virtual interns to auto-label datasets and orchestrate YOLO pipelines without the manual clicking of the pre-corona era. Privacy-first, high-performance, and 100% coffee-break free.
+
+## 🚀 How to Launch
+
+LocalFlow is designed to run entirely on your hardware. Follow these steps to get your local labeling factory running:
+
+### 1. Power up your Local Brain
+Ensure you have a local inference server running. LocalFlow supports:
+*   **Ollama**: Install from [ollama.com](https://ollama.com) and run it.
+*   **LM Studio**: Install from [lmstudio.ai](https://lmstudio.ai) and start the Local Server.
+
+### 2. Grab a Multimodal Model
+You need a model that understands images. Open your terminal and run:
+```bash
+# For Ollama users
+ollama pull llava
+# or
+ollama pull moondream
+```
+*If using LM Studio, download any Vision-enabled model (like LLaVA or Qwen-VL) and load it into the server tab.*
+
+### 3. Open the App
+Launch this framework in your browser. LocalFlow will automatically attempt to handshake with `localhost:11434` (Ollama) or `localhost:1234` (LM Studio).
+
+### 4. Connect and Label
+1. Go to the **Playground** to test your model's zero-shot performance.
+2. Switch to **Annotate**, bulk-upload your local images, and hit **Run Auto-Labeling**.
+3. Once satisfied, set your local export path and hit **Export**.
 
 ## ✨ Core Capabilities
 
-- **Intelligent Auto-Labeling**: Harness local VLMs (LLaVA, Moondream) to pre-annotate images via natural language prompts.
-- **Production Exports**: Native support for **YOLOv8** and **YOLOv11** dataset structures (`images/labels` + `data.yaml`).
-- **Inference Playground**: Compare dual-inference results from Ollama or LM Studio side-by-side.
-- **Privacy Native**: 100% local. Your data stays on your machine, away from the cloud.
-
-## 🚀 Native Integration
-
-LocalFlow communicates directly with your local AI stack via OpenAI-compatible endpoints:
-- **Ollama**: `http://localhost:11434`
-- **LM Studio**: `http://localhost:1234`
-- **Filesystem API**: Native directory selection for direct local exports.
+- **Intelligent Auto-Labeling**: Use VLMs to pre-annotate images via natural language prompts.
+- **Production Exports**: Native support for **YOLOv8** and **YOLOv11** structures (`images/labels` + `data.yaml`).
+- **Inference Playground**: Compare dual-inference results side-by-side.
+- **Privacy Native**: 100% local. Your data never leaves your machine.
 
 ---
 
 ## 📜 License
 
-MIT License
-
-Copyright (c) 2024 LocalFlow
-
-Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+MIT License. Copyright (c) 2024 LocalFlow.
