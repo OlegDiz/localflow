@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Layout, Play, Edit3, Database, Github, Settings, Plus, FolderOpen, Terminal, Palette } from 'lucide-react';
+import { Layout, Play, Edit3, Database, Github, Settings, Plus, FolderOpen, BoxSelect, Palette } from 'lucide-react';
 import Playground from './components/Playground';
 import Annotator from './components/Annotator';
 import { Project } from './types';
@@ -49,10 +49,10 @@ const App: React.FC = () => {
       {/* Sidebar */}
       <aside className="w-16 md:w-64 bg-sidebar border-r border-app flex flex-col shrink-0 z-50">
         <div className="p-6 border-b border-app flex items-center gap-3">
-          <div className="bg-app-accent p-1.5 rounded-md shadow-sm">
-            <Terminal size={18} className="text-white" />
+          <div className="bg-app-accent p-1.5 rounded-lg shadow-[0_0_15px_rgba(99,102,241,0.3)]">
+            <BoxSelect size={20} className="text-white" />
           </div>
-          <span className="font-bold tracking-tight text-lg hidden md:block">LocalFlow</span>
+          <span className="font-extrabold tracking-tighter text-xl hidden md:block">Local<span className="text-app-accent">Flow</span></span>
         </div>
 
         <nav className="flex-1 p-4 space-y-2">
@@ -79,17 +79,17 @@ const App: React.FC = () => {
         {/* Theme Switcher "On the Side" */}
         <div className="p-4 border-t border-app">
           <div className="mb-4 hidden md:block">
-            <p className="text-[10px] font-bold text-app-muted uppercase tracking-widest mb-3 flex items-center gap-2">
+            <p className="text-[10px] font-bold text-app-muted uppercase tracking-[0.15em] mb-3 flex items-center gap-2">
               <Palette size={12} /> Interface
             </p>
             <div className="flex gap-2">
-              <ThemeOption active={theme === 'snow'} color="bg-zinc-200" onClick={() => setTheme('snow')} label="Snow" />
+              <ThemeOption active={theme === 'snow'} color="bg-zinc-100" onClick={() => setTheme('snow')} label="Snow" />
               <ThemeOption active={theme === 'steel'} color="bg-zinc-900" onClick={() => setTheme('steel')} label="Steel" />
               <ThemeOption active={theme === 'midnight'} color="bg-slate-950" onClick={() => setTheme('midnight')} label="Mid" />
               <ThemeOption active={theme === 'ivory'} color="bg-stone-200" border="border-amber-200" onClick={() => setTheme('ivory')} label="Warm" />
             </div>
           </div>
-          <button className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-app-muted hover:text-app hover:bg-panel transition-all text-sm font-medium">
+          <button className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-app-muted hover:text-app hover:bg-panel transition-all text-sm font-semibold">
             <Settings size={18} />
             <span className="hidden md:block">Settings</span>
           </button>
@@ -126,9 +126,9 @@ const App: React.FC = () => {
 const NavItem = ({ active, onClick, icon, label }: any) => (
   <button
     onClick={onClick}
-    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all text-sm font-medium ${
+    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all text-sm font-semibold ${
       active 
-        ? 'bg-panel text-app-accent border border-app shadow-sm font-bold' 
+        ? 'bg-panel text-app-accent border border-app shadow-sm' 
         : 'text-app-muted hover:text-app hover:bg-panel'
     }`}
   >
