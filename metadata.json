@@ -1,0 +1,7 @@
+{
+  "name": "LocalFlow MVP",
+  "description": "A high-performance local alternative to Roboflow for image annotation, model testing, and YOLO dataset export.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}

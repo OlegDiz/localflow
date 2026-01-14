@@ -1,11 +1,44 @@
-<div align="center">
 
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
+# LocalFlow - Localhost Data Annotation Tool
 
-  <h1>Built with AI Studio</h2>
+LocalFlow is a high-performance local alternative to Roboflow. It runs entirely on your machine, integrating with local ML backends like Ollama and LM Studio for auto-labeling.
 
-  <p>The fastest path from prompt to production with Gemini.</p>
+## Key Features
+- **Playground**: Test local vision models on single images.
+- **Annotate**: Bulk label datasets with drag-and-resize bounding boxes.
+- **Auto-Label**: Uses zero-shot models (via Ollama) to pre-populate labels.
+- **YOLO Export**: One-click export for YOLOv8 and YOLO11 training.
 
-  <a href="https://aistudio.google.com/apps">Start building</a>
+## Run Instructions
 
-</div>
+### 1. Start Backend (FastAPI)
+```bash
+cd backend
+pip install -r requirements.txt
+python main.py
+```
+*Backend runs on http://localhost:8000*
+
+### 2. Start Frontend (React/Vite)
+```bash
+npm install
+npm run dev
+```
+*Frontend runs on http://localhost:3000*
+
+## API Specification
+- `POST /inference`: Send image + prompt to run local ML.
+- `GET /projects`: List all local projects.
+- `POST /projects/{id}/export`: Split dataset and generate a ZIP.
+
+## Internal Schema
+Annotations are stored as:
+```json
+{
+  "id": "uuid",
+  "label": "string",
+  "confidence": 0.0-1.0,
+  "bbox": { "x": int, "y": int, "w": int, "h": int },
+  "source": "model_name"
+}
+```
