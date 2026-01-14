@@ -61,7 +61,11 @@ const App: React.FC = () => {
           className="p-6 border-b border-app flex items-center gap-3 hover:bg-panel transition-colors text-left outline-none w-full"
         >
           <div className="bg-app-accent p-1.5 rounded-lg shadow-[0_0_15px_rgba(99,102,241,0.3)] shrink-0">
-            <BoxSelect size={20} className="text-white" />
+            <img 
+              src="https://raw.githubusercontent.com/lucide-icons/lucide/main/icons/box-select.svg" 
+              className="w-5 h-5 brightness-0 invert" 
+              alt="Logo" 
+            />
           </div>
           <span className="font-extrabold tracking-tighter text-xl hidden md:block">Local<span className="text-app-accent">Flow</span></span>
         </button>

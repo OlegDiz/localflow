@@ -1,4 +1,4 @@
-# <p align="center"><img src="https://cdn.jsdelivr.net/npm/lucide-static@0.462.0/icons/box-select.svg" width="100" height="100" style="background: #6366f1; padding: 20px; border-radius: 24px; filter: drop-shadow(0 12px 30px rgba(99, 102, 241, 0.4));" /><br/>LocalFlow</p>
+# <p align="center"><img src="https://raw.githubusercontent.com/lucide-icons/lucide/main/icons/box-select.svg" width="100" height="100" style="background: #6366f1; padding: 20px; border-radius: 24px; box-shadow: 0 12px 30px rgba(99, 102, 241, 0.4);" /><br/>LocalFlow</p>
 
 <p align="center">
   <img src="https://img.shields.io/badge/Local--First-Vision-6366f1?style=for-the-badge" />
