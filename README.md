@@ -1,72 +1,62 @@
-# <p align="center"><img src="https://img.icons8.com/fluency/96/select-all.png" width="80" /><br/>LocalFlow Studio</p>
+# <p align="center"><img src="https://raw.githubusercontent.com/lucide-icons/lucide/main/icons/box-select.svg" width="100" height="100" style="background: #6366f1; padding: 15px; border-radius: 20px; box-shadow: 0 10px 25px rgba(99, 102, 241, 0.4);" /><br/>LocalFlow Studio</p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Local--First-Computer%20Vision-indigo?style=for-the-badge" />
-  <img src="https://img.shields.io/badge/YOLO-v8%20|%20v11-green?style=for-the-badge" />
-  <img src="https://img.shields.io/badge/AI--Powered-Ollama%20|%20LM%20Studio-white?style=for-the-badge&logo=ai" />
+  <img src="https://img.shields.io/badge/Local--First-Vision%20Studio-6366f1?style=for-the-badge" />
+  <img src="https://img.shields.io/badge/YOLO-v8%20|%20v11-10b981?style=for-the-badge" />
+  <img src="https://img.shields.io/badge/AI--Orchestration-Local%20Only-f59e0b?style=for-the-badge" />
 </p>
 
 ---
 
-**LocalFlow** is a lightweight, high-performance alternative to Roboflow designed to run entirely on your localhost. It bridges the gap between local Vision-Language Models (VLMs) and traditional computer vision training pipelines by providing an intuitive studio for labeling, testing, and exporting datasets without your data ever leaving your machine.
+**LocalFlow Studio** is a professional, local-first computer vision platform designed for rapid dataset curation and model testing. It bridges the gap between raw data and training-ready assets by leveraging local multimodal models (VLMs) for automated labeling and zero-shot inference, ensuring 100% data privacy.
 
-## ✨ Key Features
+## ✨ Core Capabilities
+
+### 🧠 Intelligent Auto-Labeling
+Harness local inference servers to pre-annotate your images. By connecting to models like **LLaVA**, **Moondream**, or **BakLLaVA**, you can generate complex bounding boxes via natural language prompts without manual clicking.
+
+### 📦 Production-Ready Exports
+Full support for modern training architectures. Currently, the studio is optimized for:
+- **YOLOv8**: Standard directory structure (`images/labels`) with auto-generated `data.yaml`.
+- **YOLOv11**: Advanced dataset architecture designed specifically for the latest YOLO11 training pipelines.
 
 ### 🧪 Inference Playground
-- **Dual-Model Comparison**: Run side-by-side inference with two different local backends.
-- **Dynamic Discovery**: Auto-detect models from your running Ollama or LM Studio instances.
-- **Zero-Shot Testing**: Provide text-based instructions to VLMs and visualize bounding boxes in real-time.
+Validate your models before you train. Use the **Compare Mode** to run dual-inference across different local providers (Ollama vs. LM Studio) or different model versions side-by-side on the same frame.
 
-### 🧠 Batch Auto-Studio
-- **Auto-Labeling**: Harness the power of local LLMs (like LLaVA or Moondream) to pre-annotate thousands of images.
-- **Bulk Management**: Drag-and-drop workspace for high-speed local data orchestration.
-- **Privacy-First**: No cloud uploads. Your datasets stay in your filesystem.
+## 🚀 Native Integration
 
-### 📦 YOLO Precision Export
-- **One-Click Formatting**: Automatically structure your data for YOLOv8 or YOLO11.
-- **Path Management**: Select your local training directory via the Native File System API.
-- **Training Ready**: Generates standard folder structures (`/images`, `/labels`) and the necessary `data.yaml`.
+LocalFlow is built to talk directly to your local AI stack via OpenAI-compatible endpoints:
 
-## 🚀 Getting Started
+- **Ollama**: Default integration on `http://localhost:11434`
+- **LM Studio**: Seamless connection on `http://localhost:1234`
+- **Filesystem API**: Native directory selection for direct local exports.
 
-### 1. Prerequisites
-You need a local AI server running to use the auto-labeling and playground features:
-- **[Ollama](https://ollama.com)**: Running on `http://localhost:11434`
-- **[LM Studio](https://lmstudio.ai)**: Local Server enabled on `http://localhost:1234`
+## 🛠 Project Workflow
 
-### 2. Installation
-LocalFlow is a standalone web application. Simply serve the root directory or run via your preferred frontend tool:
-```bash
-# Using npm
-npm install
-npm run dev
-```
-
-## 🛠 Workflow
-
-1.  **Drop & Discover**: Drag your raw images into the **Annotator**.
-2.  **Configure AI**: Connect to an Ollama model (e.g., `moondream` or `llava`).
-3.  **Prompt & Process**: Tell the model what to look for (e.g., "Label all traffic cones and safety vests").
-4.  **Refine**: Verify the auto-generated boxes.
-5.  **Export**: Select your project folder and hit **Export YOLOv11**.
+1.  **Ingest**: Drag and drop your local image assets into the **Annotator**.
+2.  **Auto-Label**: Choose a local VLM and provide a prompt (e.g., *"Label all safety helmets and tools"*).
+3.  **Validate**: Review auto-generated labels in the workspace.
+4.  **Target**: Select your export format (**YOLOv8** or **YOLOv11**).
+5.  **Export**: Pick a local folder and generate a training-ready dataset instantly.
 
 ---
 
-## 🏗 System Architecture
+## 🏗 Why LocalFlow?
 
-LocalFlow communicates directly with local inference servers using OpenAI-compatible endpoints (`/v1/models`).
+- **Privacy**: Your data never leaves your GPU. No cloud uploads, no external tracking.
+- **Speed**: Eliminate the bottleneck of manual labeling with zero-shot pre-annotation.
+- **Flexibility**: Switch between local backends and model versions in a single click.
 
-```mermaid
-graph LR
-  A[LocalFlow UI] --> B[Ollama API]
-  A --> C[LM Studio API]
-  A --> D[Local Filesystem]
-  B --> E[Local GPU/CPU]
-  C --> E
-```
+---
 
 ## 📜 License
-MIT License - Created for developers who value data privacy and local-first AI development.
 
----
-<p align="center">Made with ❤️ for the Computer Vision Community</p>
+MIT License
+
+Copyright (c) 2024 LocalFlow Studio
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
