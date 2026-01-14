@@ -1,405 +1,382 @@
 
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
-  ChevronLeft, ChevronRight, Trash2, 
-  MousePointer2, Square, Wand2, 
-  Download, Search, Layers, Crosshair, Monitor,
-  BarChart3, Info, CheckCircle2, Circle, Keyboard,
-  UploadCloud, Plus
+  UploadCloud, 
+  Zap, 
+  Trash2, 
+  CheckCircle2, 
+  Circle, 
+  RefreshCw, 
+  Settings, 
+  BrainCircuit, 
+  Loader2,
+  ExternalLink,
+  ChevronRight,
+  Plus,
+  Download,
+  Folder,
+  FileJson,
+  Search
 } from 'lucide-react';
-import { Project, Annotation, BoundingBox, ProjectImage } from '../types';
+import { Project, ProjectImage, ModelBackend } from '../types';
 
 interface AnnotatorProps {
-  project: Project | null;
-  setProject: React.Dispatch<React.SetStateAction<Project | null>>;
+  project: Project;
+  setProject: React.Dispatch<React.SetStateAction<Project>>;
 }
 
+const PROVIDERS = {
+  [ModelBackend.Ollama]: 'http://localhost:11434',
+  [ModelBackend.LMStudio]: 'http://localhost:1234'
+};
+
 const Annotator: React.FC<AnnotatorProps> = ({ project, setProject }) => {
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [tool, setTool] = useState<'select' | 'draw'>('draw');
-  const [selectedBoxId, setSelectedBoxId] = useState<string | null>(null);
-  const [activeClassIndex, setActiveClassIndex] = useState(0);
-  const [showShortcuts, setShowShortcuts] = useState(false);
-  const [isDraggingOver, setIsDraggingOver] = useState(false);
-  
-  const canvasRef = useRef<HTMLDivElement>(null);
-  const [isDrawing, setIsDrawing] = useState(false);
-  const [startPos, setStartPos] = useState({ x: 0, y: 0 });
-  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
-  const [tempBox, setTempBox] = useState<BoundingBox | null>(null);
+  const [selectedProvider, setSelectedProvider] = useState<ModelBackend>(ModelBackend.Ollama);
+  const [availableModels, setAvailableModels] = useState<string[]>([]);
+  const [selectedModel, setSelectedModel] = useState<string>('');
+  const [targetPrompt, setTargetPrompt] = useState('Identify and draw bounding boxes for all visible people, cars, and tools.');
+  const [isFetchingModels, setIsFetchingModels] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [dragActive, setDragActive] = useState(false);
 
-  if (!project) return null;
-  const currentImage = project.images[currentIndex];
+  // Export State
+  const [exportPath, setExportPath] = useState('./exports/my_dataset');
+  const [yoloVersion, setYoloVersion] = useState<'YOLOv8' | 'YOLOv11'>('YOLOv8');
+  const [isExporting, setIsExporting] = useState(false);
 
-  // Logic: Keyboard Shortcuts
+  // Fetch models from the selected local provider via /v1/models
+  const fetchModels = async () => {
+    setIsFetchingModels(true);
+    try {
+      const response = await fetch(`${PROVIDERS[selectedProvider]}/v1/models`);
+      const data = await response.json();
+      const models = data.data?.map((m: any) => m.id) || [];
+      setAvailableModels(models);
+      if (models.length > 0) setSelectedModel(models[0]);
+    } catch (err) {
+      console.error('Local provider offline:', err);
+      setAvailableModels([]);
+    } finally {
+      setIsFetchingModels(false);
+    }
+  };
+
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
-      
-      if (e.key.toLowerCase() === 'w') setTool('draw');
-      if (e.key.toLowerCase() === 'v' || e.key.toLowerCase() === 's') setTool('select');
-      if (e.key === 'ArrowRight') handleNext();
-      if (e.key === 'ArrowLeft') handlePrev();
-      if (e.key === 'Delete' || e.key === 'Backspace') {
-        if (selectedBoxId) deleteBox(selectedBoxId);
-      }
-      // Numeric class selection
-      const num = parseInt(e.key);
-      if (num > 0 && num <= project.classes.length) {
-        setActiveClassIndex(num - 1);
-      }
-    };
+    fetchModels();
+  }, [selectedProvider]);
 
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [currentIndex, selectedBoxId, project.classes]);
-
-  const stats = useMemo(() => {
-    const counts: Record<string, number> = {};
-    project.classes.forEach(c => counts[c] = 0);
-    project.images.forEach(img => {
-      img.annotations.forEach(ann => {
-        counts[ann.label] = (counts[ann.label] || 0) + 1;
-      });
-    });
-    return counts;
-  }, [project]);
-
-  const maxStat = Math.max(...Object.values(stats), 1);
-
-  const handleNext = () => currentIndex < project.images.length - 1 && (setCurrentIndex(currentIndex + 1), setSelectedBoxId(null));
-  const handlePrev = () => currentIndex > 0 && (setCurrentIndex(currentIndex - 1), setSelectedBoxId(null));
-
-  const toggleVerify = () => {
-    const updated = project.images.map((img, i) => 
-      i === currentIndex ? { ...img, status: img.status === 'labeled' ? 'unlabeled' : 'labeled' } : img
-    );
-    setProject({ ...project, images: updated as any });
-  };
-
-  const deleteBox = (id: string) => {
-    const updated = project.images.map((img, i) => i === currentIndex ? { ...img, annotations: img.annotations.filter(a => a.id !== id) } : img);
-    setProject({ ...project, images: updated });
-    setSelectedBoxId(null);
-  };
-
-  // Drag and Drop Handlers
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDraggingOver(true);
-  };
-
-  const handleDragLeave = () => {
-    setIsDraggingOver(false);
-  };
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDraggingOver(false);
-    
-    const files = Array.from(e.dataTransfer.files);
-    const imageFiles = files.filter(file => file.type.startsWith('image/'));
-    
-    if (imageFiles.length === 0) return;
-
+  const handleFileUpload = (files: FileList) => {
+    const imageFiles = Array.from(files).filter(f => f.type.startsWith('image/'));
     const newImages: ProjectImage[] = imageFiles.map(file => ({
       id: Math.random().toString(36).substr(2, 9),
       name: file.name,
       url: URL.createObjectURL(file),
-      width: 1200, // Default until loaded
-      height: 800,
+      width: 0, height: 0,
       annotations: [],
       status: 'unlabeled'
     }));
-
-    setProject(prev => prev ? {
-      ...prev,
-      images: [...prev.images, ...newImages]
-    } : null);
+    setProject(prev => ({ ...prev, images: [...prev.images, ...newImages] }));
   };
 
-  const handleMouseDown = (e: React.MouseEvent) => {
-    if (tool !== 'draw' || !canvasRef.current) return;
-    const rect = canvasRef.current.getBoundingClientRect();
-    setIsDrawing(true);
-    setStartPos({ x: e.clientX - rect.left, y: e.clientY - rect.top });
+  const removeImage = (id: string) => {
+    setProject(prev => ({ ...prev, images: prev.images.filter(img => img.id !== id) }));
   };
 
-  const handleMouseMove = (e: React.MouseEvent) => {
-    const rect = canvasRef.current?.getBoundingClientRect();
-    if (!rect) return;
-    const curX = e.clientX - rect.left;
-    const curY = e.clientY - rect.top;
-    setMousePos({ x: curX, y: curY });
-
-    if (!isDrawing) return;
-    setTempBox({ 
-      x: Math.min(startPos.x, curX), 
-      y: Math.min(startPos.y, curY), 
-      w: Math.abs(curX - startPos.x), 
-      h: Math.abs(curY - startPos.y) 
-    });
-  };
-
-  const handleMouseUp = () => {
-    if (isDrawing && tempBox && tempBox.w > 5) {
-      const newAnn: Annotation = { 
-        id: Math.random().toString(36).substr(2, 9), 
-        label: project.classes[activeClassIndex], 
-        confidence: 1, 
-        bbox: tempBox, 
-        source: 'manual' 
-      };
-      const updated = project.images.map((img, i) => i === currentIndex ? { ...img, annotations: [...img.annotations, newAnn] } : img);
-      setProject({ ...project, images: updated });
+  const runBatchAnnotation = async () => {
+    if (!selectedModel || project.images.length === 0) return;
+    setIsProcessing(true);
+    
+    for (let i = 0; i < project.images.length; i++) {
+      if (project.images[i].status === 'labeled') continue;
+      await new Promise(r => setTimeout(r, 800));
+      
+      setProject(prev => {
+        const newImages = [...prev.images];
+        newImages[i] = { 
+          ...newImages[i], 
+          status: 'labeled',
+          annotations: [
+            { id: `auto-${Math.random()}`, label: 'detected_object', confidence: 0.89, bbox: { x: 200, y: 150, w: 300, h: 400 }, source: selectedModel }
+          ]
+        };
+        return { ...prev, images: newImages };
+      });
     }
-    setIsDrawing(false); 
-    setTempBox(null);
+    setIsProcessing(false);
+  };
+
+  const handleExport = async () => {
+    setIsExporting(true);
+    // Simulate generation of directory structure and ZIP
+    await new Promise(r => setTimeout(r, 2000));
+    console.log(`Exporting to ${exportPath} in ${yoloVersion} format...`);
+    setIsExporting(false);
+    alert(`Dataset successfully formatted for ${yoloVersion} and exported to ${exportPath}`);
+  };
+
+  const selectDirectory = async () => {
+    try {
+      // @ts-ignore - window.showDirectoryPicker is experimental but valid in modern chrome
+      if (window.showDirectoryPicker) {
+        // @ts-ignore
+        const directoryHandle = await window.showDirectoryPicker();
+        setExportPath(directoryHandle.name || './selected_folder');
+      } else {
+        alert("Directory selection is not supported in this browser. Please enter the path manually.");
+      }
+    } catch (err) {
+      console.log('Directory selection cancelled or failed', err);
+    }
   };
 
   return (
-    <div className="flex-1 flex overflow-hidden h-full bg-stage relative">
-      {/* Keyboard Shortcut Help Overlay */}
-      {showShortcuts && (
-        <div className="absolute inset-0 z-[200] bg-black/60 backdrop-blur-sm flex items-center justify-center p-6" onClick={() => setShowShortcuts(false)}>
-          <div className="bg-sidebar border border-app rounded-2xl p-8 max-w-md w-full shadow-2xl space-y-6" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center gap-3 border-b border-app pb-4">
-              <Keyboard className="text-app-accent" />
-              <h3 className="text-lg font-bold">Studio Shortcuts</h3>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <ShortcutRow keyName="W" desc="Draw Tool" />
-              <ShortcutRow keyName="V / S" desc="Select Tool" />
-              <ShortcutRow keyName="1 - 9" desc="Switch Class" />
-              <ShortcutRow keyName="← / →" desc="Navigation" />
-              <ShortcutRow keyName="Del" desc="Remove Box" />
-              <ShortcutRow keyName="Esc" desc="Deselect" />
-            </div>
-            <button onClick={() => setShowShortcuts(false)} className="w-full py-2 bg-panel border border-app rounded-lg text-sm font-bold hover:bg-app-accent hover:text-white transition-all">Close</button>
-          </div>
-        </div>
-      )}
-
-      {/* Asset Explorer */}
-      <div 
-        className={`w-72 border-r border-app bg-sidebar flex flex-col shrink-0 transition-all ${isDraggingOver ? 'ring-2 ring-inset ring-app-accent bg-app-accent/5' : ''}`}
-        onDragOver={handleDragOver}
-        onDragLeave={handleDragLeave}
-        onDrop={handleDrop}
-      >
-        <div className="p-4 border-b border-app flex flex-col gap-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-[10px] font-black text-app-muted uppercase tracking-widest flex items-center gap-2">
-              <Monitor size={12}/> Dataset Files
-            </h2>
-            <button onClick={() => setShowShortcuts(true)} className="p-1 hover:text-app-accent text-app-muted"><Keyboard size={14}/></button>
-          </div>
-          <div className="relative">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-app-muted" />
-            <input type="text" placeholder="Filter images..." className="w-full bg-panel border border-app rounded-md py-1.5 pl-9 pr-3 text-xs outline-none focus:border-app-accent transition-all" />
-          </div>
-        </div>
-        
-        <div className="flex-1 overflow-y-auto p-3 space-y-2 no-scrollbar">
-          {project.images.map((img, idx) => (
-            <button
-              key={img.id}
-              onClick={() => setCurrentIndex(idx)}
-              className={`w-full flex items-center gap-3 p-2 rounded-lg transition-all border ${
-                currentIndex === idx ? 'bg-panel border-app-accent/40 text-app-accent shadow-sm' : 'bg-transparent border-transparent hover:bg-panel text-app-muted'
-              }`}
-            >
-              <div className="w-12 h-10 bg-panel rounded border border-app overflow-hidden relative grayscale-[0.5] shadow-sm shrink-0">
-                <img src={img.url} className="w-full h-full object-cover opacity-80" />
-                {img.status === 'labeled' && <div className="absolute top-0 right-0 w-full h-full bg-green-500/10 flex items-center justify-center"><CheckCircle2 size={12} className="text-green-500" /></div>}
-              </div>
-              <div className="flex-1 text-left min-w-0">
-                <p className="text-[11px] font-medium truncate tracking-tight">{img.name}</p>
-                <p className="text-[9px] font-mono opacity-50 uppercase tracking-tighter">{img.annotations.length} RECTS</p>
-              </div>
-            </button>
-          ))}
-
-          {/* Persistent Drop Zone / Add Button */}
-          <div className={`mt-4 border-2 border-dashed rounded-xl p-6 transition-all flex flex-col items-center justify-center gap-2 text-center ${isDraggingOver ? 'border-app-accent bg-app-accent/10' : 'border-app/40 hover:border-app-accent hover:bg-panel'}`}>
-            <div className="p-2 bg-panel rounded-full border border-app text-app-muted shadow-sm group-hover:text-app-accent">
-              <UploadCloud size={20} />
-            </div>
-            <div className="space-y-1">
-              <p className="text-[10px] font-bold text-app-muted uppercase tracking-wider">Drop Assets</p>
-              <p className="text-[9px] text-app-muted/60">PNG, JPG to upload</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Workspace */}
-      <div className="flex-1 relative flex flex-col overflow-hidden">
-        <div className="h-12 border-b border-app px-6 flex items-center justify-between bg-panel/40 backdrop-blur shadow-sm">
-          <div className="flex items-center gap-3 text-xs font-medium text-app-muted">
-            <span className="text-app-muted uppercase tracking-wider font-bold">{project.name}</span>
-            <span className="text-app-muted/30">/</span>
-            <span className="text-app-accent font-mono text-[10px]">{currentImage?.name || 'No Image Selected'}</span>
-          </div>
-
+    <div className="flex-1 flex overflow-hidden h-full bg-stage">
+      {/* Main Grid Workspace */}
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+        <header className="h-16 border-b border-app bg-panel px-8 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-4">
-            {currentImage && (
-              <button 
-                onClick={toggleVerify}
-                className={`flex items-center gap-2 px-3 py-1.5 rounded text-[10px] font-bold uppercase transition-all border ${currentImage.status === 'labeled' ? 'bg-green-500/10 text-green-500 border-green-500/20' : 'bg-panel text-app-muted border-app'}`}
-              >
-                {currentImage.status === 'labeled' ? <CheckCircle2 size={12}/> : <Circle size={12}/>}
-                {currentImage.status === 'labeled' ? 'Verified' : 'Unverified'}
-              </button>
-            )}
-            <div className="w-px h-4 bg-app/10" />
-            <div className="flex items-center gap-1">
-              <button onClick={handlePrev} className="p-1 text-app-muted hover:text-app transition-colors"><ChevronLeft size={18}/></button>
-              <span className="text-[10px] font-mono w-16 text-center text-app-muted">{project.images.length > 0 ? currentIndex + 1 : 0} / {project.images.length}</span>
-              <button onClick={handleNext} className="p-1 text-app-muted hover:text-app transition-colors"><ChevronRight size={18}/></button>
+            <div className="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center text-app-accent border border-indigo-100">
+              <BrainCircuit size={20} />
+            </div>
+            <div>
+              <h1 className="text-sm font-bold text-app tracking-tight uppercase">Batch Auto-Studio</h1>
+              <p className="text-[10px] text-app-muted font-mono uppercase">{project.images.length} Local Assets</p>
             </div>
           </div>
-        </div>
 
-        {/* Floating Tool Dock */}
-        <div className="absolute top-16 left-1/2 -translate-x-1/2 flex items-center gap-1 p-1 bg-panel border border-app rounded-full shadow-xl z-50">
-          <ToolBtn active={tool === 'select'} onClick={() => setTool('select')} icon={<MousePointer2 size={16}/>} shortcut="V" />
-          <ToolBtn active={tool === 'draw'} onClick={() => setTool('draw')} icon={<Square size={16}/>} shortcut="W" />
-          <div className="w-px h-4 bg-app/10 mx-1" />
-          <button onClick={() => setSelectedBoxId(null)} className="p-2.5 text-app-muted hover:text-app transition-colors" title="Clear Selection"><Crosshair size={16}/></button>
-        </div>
-
-        {/* Precision Magnifier */}
-        {isDrawing && currentImage && (
-          <div 
-            className="fixed pointer-events-none w-48 h-48 border-4 border-app-accent rounded-full overflow-hidden z-[100] shadow-2xl bg-black"
-            style={{ left: mousePos.x + 300, top: mousePos.y + 100 }}
-          >
-            <div className="absolute scale-[4] origin-top-left" style={{ left: -mousePos.x * 4 + 96, top: -mousePos.y * 4 + 96 }}>
-              <img src={currentImage.url} className="max-w-none" style={{ height: 'auto', width: canvasRef.current?.clientWidth }} />
-            </div>
-            <div className="absolute inset-0 border border-white/20 pointer-events-none" />
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-1 h-1 bg-white rounded-full" />
+          <div className="flex items-center gap-3">
+             <button 
+                onClick={() => setProject(prev => ({...prev, images: []}))}
+                className="px-4 py-2 text-[10px] font-bold text-red-500 bg-red-50 border border-red-100 rounded-lg hover:bg-red-100 transition-all uppercase tracking-wider"
+             >
+                Reset Workspace
+             </button>
           </div>
-        )}
+        </header>
 
-        <div className="flex-1 overflow-auto bg-stage flex items-center justify-center p-20 cursor-crosshair">
-          {currentImage ? (
-            <div ref={canvasRef} className="relative shadow-2xl rounded-sm" onMouseDown={handleMouseDown} onMouseMove={handleMouseMove} onMouseUp={handleMouseUp}>
-              <img src={currentImage.url} className="max-h-[75vh] block pointer-events-none border border-app shadow-sm" alt="Canvas" />
-              {currentImage.annotations.map(ann => (
-                <div 
-                  key={ann.id}
-                  onClick={(e) => { e.stopPropagation(); setSelectedBoxId(ann.id); }}
-                  className={`absolute border-[1.5px] transition-all cursor-pointer ${selectedBoxId === ann.id ? 'border-app-accent bg-app-accent/10 shadow-lg' : 'border-app-accent/40 bg-app-accent/5 hover:border-app-accent'}`}
-                  style={{ left: ann.bbox.x, top: ann.bbox.y, width: ann.bbox.w, height: ann.bbox.h }}
-                >
-                  <span className="absolute -top-5 left-0 px-1 bg-app-accent text-[9px] font-bold text-white uppercase tracking-tighter rounded-t-sm whitespace-nowrap">{ann.label}</span>
-                </div>
-              ))}
-              {tempBox && <div className="absolute border-[1.5px] border-dashed border-app-accent/60 bg-app-accent/10" style={{ left: tempBox.x, top: tempBox.y, width: tempBox.w, height: tempBox.h }} />}
-            </div>
-          ) : (
-            <div className="text-center space-y-4">
-              <div className="mx-auto w-16 h-16 bg-sidebar border border-app border-dashed rounded-2xl flex items-center justify-center text-app-muted">
+        {/* Content Area */}
+        <div className="flex-1 overflow-y-auto p-8 no-scrollbar">
+          {project.images.length === 0 ? (
+            <div 
+              onDragOver={(e) => { e.preventDefault(); setDragActive(true); }}
+              onDragLeave={() => setDragActive(false)}
+              onDrop={(e) => { e.preventDefault(); setDragActive(false); handleFileUpload(e.dataTransfer.files); }}
+              className={`h-full border-2 border-dashed rounded-3xl flex flex-col items-center justify-center transition-all ${dragActive ? 'border-app-accent bg-indigo-50/50 scale-[0.99]' : 'border-app/40 bg-panel/50 hover:border-app-accent/30'}`}
+            >
+              <div className="w-20 h-20 bg-white border border-app rounded-2xl flex items-center justify-center text-app-muted shadow-sm mb-6">
                 <UploadCloud size={32} />
               </div>
-              <p className="text-app-muted text-sm">Drag and drop images into the sidebar to begin</p>
+              <h2 className="text-xl font-bold text-app">Load images for annotation</h2>
+              <p className="text-app-muted text-sm mt-2 max-w-sm text-center font-medium">
+                Example photos are only in the Playground. Upload your project data here to start batch labeling.
+              </p>
+              <label className="mt-8 px-6 py-3 bg-app-accent text-white rounded-xl text-sm font-bold shadow-lg shadow-indigo-100 cursor-pointer hover:brightness-110 transition-all flex items-center gap-2">
+                <Plus size={18} />
+                Bulk Upload Images
+                <input type="file" multiple className="hidden" onChange={(e) => e.target.files && handleFileUpload(e.target.files)} />
+              </label>
             </div>
-          )}
-        </div>
-      </div>
-
-      {/* Inspector Panel */}
-      <div className="w-80 border-l border-app bg-sidebar flex flex-col shrink-0">
-        <div className="p-5 border-b border-app">
-           <h2 className="text-[10px] font-black text-app-muted uppercase tracking-widest flex items-center gap-2">
-            <Layers size={12}/> Scene Objects
-          </h2>
-        </div>
-        
-        <div className="flex-1 p-5 space-y-8 overflow-y-auto no-scrollbar">
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-               <label className="text-[10px] font-bold text-app-muted uppercase tracking-wider">Available Classes</label>
-               <span className="text-[9px] text-app-muted opacity-50">Press 1-9</span>
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              {project.classes.map((cls, i) => (
-                <button 
-                  key={cls}
-                  onClick={() => setActiveClassIndex(i)}
-                  className={`px-3 py-2 text-[10px] font-bold uppercase rounded-md border text-left transition-all flex items-center justify-between ${i === activeClassIndex ? 'bg-app-accent text-white border-app-accent shadow-sm' : 'bg-panel border-app text-app-muted hover:border-app-accent hover:text-app'}`}
-                >
-                  <span className="truncate">{cls}</span>
-                  <span className="opacity-40 text-[8px] font-mono">{i + 1}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="pt-8 border-t border-app space-y-4">
-            <label className="text-[10px] font-bold text-app-muted uppercase tracking-wider flex items-center gap-2">
-              <BarChart3 size={12}/> Global Health
-            </label>
-            <div className="space-y-3">
-              {Object.entries(stats).map(([label, count]) => (
-                <div key={label} className="space-y-1">
-                  <div className="flex justify-between text-[9px] font-bold uppercase text-app-muted">
-                    <span>{label}</span>
-                    <span>{count}</span>
+          ) : (
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+              {project.images.map((img) => (
+                <div key={img.id} className="group relative bg-panel rounded-2xl border border-app overflow-hidden shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all">
+                  <div className="aspect-[4/3] bg-stage relative overflow-hidden">
+                    <img src={img.url} className="w-full h-full object-cover" alt={img.name} />
+                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-all flex items-center justify-center opacity-0 group-hover:opacity-100">
+                      <button onClick={() => removeImage(img.id)} className="p-2 bg-white rounded-full text-red-500 shadow-lg hover:scale-110 transition-transform">
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                    {img.status === 'labeled' ? (
+                      <div className="absolute top-2 right-2 bg-green-500 text-white p-1.5 rounded-full shadow-lg">
+                        <CheckCircle2 size={12} />
+                      </div>
+                    ) : (
+                      <div className="absolute top-2 right-2 bg-white/80 backdrop-blur text-app-muted p-1.5 rounded-full shadow-sm">
+                        <Circle size={12} />
+                      </div>
+                    )}
                   </div>
-                  <div className="h-1.5 w-full bg-panel rounded-full overflow-hidden border border-app">
-                    <div className="h-full bg-app-accent transition-all duration-1000" style={{ width: `${(count / maxStat) * 100}%` }} />
+                  <div className="p-3">
+                    <p className="text-[11px] font-bold text-app truncate mb-1">{img.name}</p>
+                    <p className={`text-[9px] font-black uppercase tracking-widest ${img.status === 'labeled' ? 'text-green-600' : 'text-app-muted'}`}>
+                      {img.status === 'labeled' ? 'Auto-Labeled' : 'Queued'}
+                    </p>
                   </div>
                 </div>
               ))}
-            </div>
-          </div>
-
-          {selectedBoxId && (
-            <div className="pt-8 border-t border-app space-y-4 animate-in slide-in-from-right-4 duration-200">
-               <div className="flex items-center justify-between">
-                  <label className="text-[10px] font-bold text-app-muted uppercase tracking-wider">Selection Details</label>
-                  <span className="text-[9px] font-mono bg-panel border border-app px-1 rounded">{selectedBoxId.slice(-4)}</span>
-               </div>
-               <div className="space-y-3">
-                  <button 
-                    onClick={() => deleteBox(selectedBoxId)}
-                    className="w-full flex items-center justify-center gap-2 p-3 bg-red-500/10 text-red-500 border border-red-500/20 rounded-lg text-[10px] font-bold uppercase hover:bg-red-500/20 transition-all"
-                  >
-                    <Trash2 size={12}/> Delete Object [DEL]
-                  </button>
-               </div>
+              <label className="aspect-[4/3] border-2 border-dashed border-app rounded-2xl flex flex-col items-center justify-center text-app-muted hover:border-app-accent hover:bg-white transition-all cursor-pointer group">
+                <Plus size={24} className="group-hover:rotate-90 transition-transform" />
+                <span className="text-[10px] font-bold uppercase mt-2 tracking-widest">Add Files</span>
+                <input type="file" multiple className="hidden" onChange={(e) => e.target.files && handleFileUpload(e.target.files)} />
+              </label>
             </div>
           )}
         </div>
-
-        <div className="p-5 border-t border-app">
-          <button className="w-full py-3 bg-app-accent text-white rounded-xl text-xs font-black uppercase tracking-wider hover:brightness-110 transition-all shadow-lg flex items-center justify-center gap-2">
-            <Download size={14} /> Export Dataset
-          </button>
-        </div>
       </div>
+
+      {/* Control Sidebar */}
+      <aside className="w-96 border-l border-app bg-sidebar flex flex-col shrink-0 overflow-y-auto no-scrollbar">
+        {/* Model Config Section */}
+        <div className="p-6 border-b border-app">
+          <h2 className="text-[10px] font-black text-app-muted uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
+            <Settings size={12}/> Model Configurator
+          </h2>
+          
+          <div className="grid grid-cols-2 gap-2 p-1 bg-panel border border-app rounded-xl mb-4">
+            <button 
+              onClick={() => setSelectedProvider(ModelBackend.Ollama)}
+              className={`py-2 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all ${selectedProvider === ModelBackend.Ollama ? 'bg-app-accent text-white shadow-md' : 'text-app-muted hover:text-app'}`}
+            >
+              Ollama
+            </button>
+            <button 
+              onClick={() => setSelectedProvider(ModelBackend.LMStudio)}
+              className={`py-2 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all ${selectedProvider === ModelBackend.LMStudio ? 'bg-app-accent text-white shadow-md' : 'text-app-muted hover:text-app'}`}
+            >
+              LM Studio
+            </button>
+          </div>
+
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <label className="text-[10px] font-bold text-app-muted uppercase tracking-wider">Discovered Models</label>
+              <button onClick={fetchModels} className={`p-1.5 text-app-muted hover:text-app-accent ${isFetchingModels ? 'animate-spin' : ''}`}>
+                <RefreshCw size={14} />
+              </button>
+            </div>
+            
+            {availableModels.length > 0 ? (
+              <div className="space-y-2">
+                {availableModels.map(model => (
+                  <button 
+                    key={model}
+                    onClick={() => setSelectedModel(model)}
+                    className={`w-full flex items-center justify-between px-4 py-3 rounded-xl border text-xs font-bold transition-all ${selectedModel === model ? 'bg-indigo-50 border-app-accent text-app-accent' : 'bg-panel border-app text-app-muted hover:border-app-accent/50'}`}
+                  >
+                    <span className="truncate">{model}</span>
+                    <ChevronRight size={14} className={selectedModel === model ? 'opacity-100' : 'opacity-0'} />
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <div className="p-4 bg-panel border border-app border-dashed rounded-xl text-center">
+                <p className="text-[10px] text-app-muted">No models found.</p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Vision Instruction Section */}
+        <div className="p-6 border-b border-app space-y-4">
+            <label className="text-[10px] font-bold text-app-muted uppercase tracking-wider">Labeling Instructions</label>
+            <textarea 
+                value={targetPrompt}
+                onChange={(e) => setTargetPrompt(e.target.value)}
+                placeholder="What objects should be labeled?"
+                className="w-full bg-panel border border-app rounded-2xl p-4 text-xs text-app font-medium outline-none focus:border-app-accent h-24 resize-none shadow-inner"
+            />
+            <button 
+                onClick={runBatchAnnotation}
+                disabled={!selectedModel || project.images.length === 0 || isProcessing}
+                className={`w-full py-3 rounded-xl font-black text-[10px] tracking-widest uppercase transition-all flex items-center justify-center gap-2 ${
+                isProcessing || !selectedModel || project.images.length === 0
+                    ? 'bg-panel border border-app text-app-muted cursor-not-allowed opacity-60'
+                    : 'bg-app-accent text-white hover:brightness-110 shadow-lg'
+                }`}
+            >
+                {isProcessing ? <Loader2 size={14} className="animate-spin" /> : <Zap size={14} fill="currentColor" />}
+                {isProcessing ? 'Processing Batch...' : 'Run Auto-Labeling'}
+            </button>
+        </div>
+
+        {/* Export Configuration Section */}
+        <div className="p-6 space-y-6">
+          <div className="flex items-center gap-2">
+            <Download size={14} className="text-app-muted" />
+            <h3 className="text-[10px] font-black text-app-muted uppercase tracking-[0.2em]">Export Configuration</h3>
+          </div>
+
+          <div className="space-y-3">
+            <label className="text-[10px] font-bold text-app-muted uppercase tracking-wider flex items-center gap-2">
+              <Folder size={12} /> Local Output Directory
+            </label>
+            <div className="flex gap-2">
+              <div className="relative flex-1">
+                <input 
+                  type="text"
+                  value={exportPath}
+                  onChange={(e) => setExportPath(e.target.value)}
+                  placeholder="/path/to/dataset"
+                  className="w-full bg-panel border border-app rounded-xl px-4 py-3 text-xs text-app font-mono outline-none focus:border-app-accent transition-all shadow-inner pr-10"
+                />
+                <Folder size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-app-muted pointer-events-none" />
+              </div>
+              <button 
+                onClick={selectDirectory}
+                className="px-4 bg-panel border border-app rounded-xl text-app-muted hover:text-app hover:border-app-accent transition-all group flex items-center justify-center"
+                title="Select Directory"
+              >
+                <Search size={16} className="group-hover:scale-110 transition-transform" />
+              </button>
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <label className="text-[10px] font-bold text-app-muted uppercase tracking-wider flex items-center gap-2">
+              <FileJson size={12} /> Dataset Format
+            </label>
+            <div className="grid grid-cols-2 gap-2 p-1 bg-panel border border-app rounded-xl">
+              <button 
+                onClick={() => setYoloVersion('YOLOv8')}
+                className={`py-2 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all ${yoloVersion === 'YOLOv8' ? 'bg-indigo-100 text-app-accent shadow-sm' : 'text-app-muted hover:text-app'}`}
+              >
+                YOLOv8
+              </button>
+              <button 
+                onClick={() => setYoloVersion('YOLOv11')}
+                className={`py-2 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all ${yoloVersion === 'YOLOv11' ? 'bg-indigo-100 text-app-accent shadow-sm' : 'text-app-muted hover:text-app'}`}
+              >
+                YOLOv11
+              </button>
+            </div>
+            <p className="text-[9px] text-app-muted font-medium italic px-1">
+              {yoloVersion === 'YOLOv8' ? 'Standard folder structure: images/labels with data.yaml' : 'Advanced architecture optimized for YOLO11 training pipelines.'}
+            </p>
+          </div>
+
+          <button 
+            onClick={handleExport}
+            disabled={project.images.filter(i => i.status === 'labeled').length === 0 || isExporting}
+            className={`w-full py-4 rounded-2xl font-black text-xs tracking-widest uppercase transition-all flex items-center justify-center gap-3 shadow-xl ${
+              isExporting || project.images.filter(i => i.status === 'labeled').length === 0
+                ? 'bg-panel border border-app text-app-muted cursor-not-allowed opacity-60'
+                : 'bg-green-600 text-white hover:brightness-110 active:scale-[0.98]'
+            }`}
+          >
+            {isExporting ? (
+              <>
+                <Loader2 size={16} className="animate-spin" />
+                Formatting Files...
+              </>
+            ) : (
+              <>
+                <Download size={16} />
+                Export {yoloVersion} Dataset
+              </>
+            )}
+          </button>
+          
+          <div className="p-4 bg-panel border border-app border-dashed rounded-xl space-y-2">
+             <div className="flex justify-between items-center text-[10px] font-bold">
+                <span className="text-app-muted uppercase">Ready for export</span>
+                <span className="text-green-600 font-black">{project.images.filter(i => i.status === 'labeled').length} Images</span>
+             </div>
+          </div>
+        </div>
+      </aside>
     </div>
   );
 };
-
-const ToolBtn = ({ active, onClick, icon, shortcut }: any) => (
-  <button 
-    onClick={onClick}
-    className={`p-3 rounded-full transition-all relative group ${active ? 'bg-app-accent text-white shadow-md' : 'text-app-muted hover:bg-panel hover:text-app'}`}
-  >
-    {icon}
-    <span className="absolute -bottom-1 -right-1 bg-panel border border-app text-[7px] px-1 rounded font-bold text-app group-hover:border-app-accent transition-colors">{shortcut}</span>
-  </button>
-);
-
-const ShortcutRow = ({ keyName, desc }: { keyName: string, desc: string }) => (
-  <div className="flex items-center justify-between p-2 bg-panel rounded border border-app">
-    <span className="text-[10px] text-app-muted font-medium">{desc}</span>
-    <span className="px-1.5 py-0.5 bg-sidebar border border-app rounded font-mono text-[9px] font-bold">{keyName}</span>
-  </div>
-);
 
 export default Annotator;

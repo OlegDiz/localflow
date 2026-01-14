@@ -1,39 +1,48 @@
 
 import React, { useState, useEffect } from 'react';
-import { Layout, Play, Edit3, Database, Github, Settings, Plus, FolderOpen, BoxSelect, Palette } from 'lucide-react';
+import { Play, Edit3, Database, Settings, Plus, FolderOpen, BoxSelect, Palette } from 'lucide-react';
 import Playground from './components/Playground';
 import Annotator from './components/Annotator';
-import { Project } from './types';
+import { Project, ProjectImage } from './types';
 
 type Theme = 'snow' | 'steel' | 'midnight' | 'ivory';
 
+const EXAMPLE_IMAGES: ProjectImage[] = [
+  {
+    id: 'ex_market',
+    name: 'market_produce.jpg',
+    url: 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&q=80&w=1200',
+    width: 1200, height: 800, annotations: [], status: 'unlabeled'
+  },
+  {
+    id: 'ex_traffic',
+    name: 'city_traffic.jpg',
+    url: 'https://images.unsplash.com/photo-1485738422979-f5c462d49f74?auto=format&fit=crop&q=80&w=1200',
+    width: 1200, height: 800, annotations: [], status: 'unlabeled'
+  },
+  {
+    id: 'ex_workshop',
+    name: 'workshop_tools.jpg',
+    url: 'https://images.unsplash.com/photo-1581092160562-40aa08e78837?auto=format&fit=crop&q=80&w=1200',
+    width: 1200, height: 800, annotations: [], status: 'unlabeled'
+  },
+  {
+    id: 'ex_desk',
+    name: 'office_desk.jpg',
+    url: 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?auto=format&fit=crop&q=80&w=1200',
+    width: 1200, height: 800, annotations: [], status: 'unlabeled'
+  }
+];
+
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'playground' | 'annotate' | 'projects'>('playground');
-  const [currentProject, setCurrentProject] = useState<Project | null>(null);
+  const [currentProject, setCurrentProject] = useState<Project>({
+    id: 'user_proj_1',
+    name: 'My Local Dataset',
+    classes: [],
+    images: [] // Starts empty for user uploads
+  });
   const [theme, setTheme] = useState<Theme>('snow');
-
-  useEffect(() => {
-    const mockProject: Project = {
-      id: 'proj_1',
-      name: 'Industrial Safety',
-      classes: ['Worker', 'Vest', 'Hardhat', 'Gloves'],
-      images: [
-        {
-          id: 'img_1',
-          name: 'worker_safety_01.jpg',
-          url: 'https://images.unsplash.com/photo-1516216628859-9bccecab13ca?auto=format&fit=crop&q=80&w=1200',
-          width: 1200, height: 800, annotations: [], status: 'unlabeled'
-        },
-        {
-          id: 'img_2',
-          name: 'site_overview.jpg',
-          url: 'https://images.unsplash.com/photo-1504307651254-35680f356dfd?auto=format&fit=crop&q=80&w=1200',
-          width: 1200, height: 800, annotations: [], status: 'unlabeled'
-        }
-      ]
-    };
-    setCurrentProject(mockProject);
-  }, []);
 
   const getThemeClass = () => {
     switch (theme) {
@@ -76,7 +85,7 @@ const App: React.FC = () => {
           />
         </nav>
 
-        {/* Theme Switcher "On the Side" */}
+        {/* Theme Switcher */}
         <div className="p-4 border-t border-app">
           <div className="mb-4 hidden md:block">
             <p className="text-[10px] font-bold text-app-muted uppercase tracking-[0.15em] mb-3 flex items-center gap-2">
@@ -98,8 +107,8 @@ const App: React.FC = () => {
 
       {/* Main Content Area */}
       <main className="flex-1 flex flex-col overflow-hidden">
-        {activeTab === 'playground' && <Playground />}
-        {activeTab === 'annotate' && <Annotator project={currentProject} setProject={setCurrentProject} />}
+        {activeTab === 'playground' && <Playground exampleImages={EXAMPLE_IMAGES} />}
+        {activeTab === 'annotate' && <Annotator project={currentProject} setProject={setCurrentProject as any} />}
         {activeTab === 'projects' && (
           <div className="flex-1 flex items-center justify-center p-8 bg-panel">
             <div className="max-w-xl w-full space-y-8">
