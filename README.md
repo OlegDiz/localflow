@@ -24,6 +24,26 @@ LocalFlow communicates directly with your local AI stack via OpenAI-compatible e
 - **LM Studio**: `http://localhost:1234`
 - **Filesystem API**: Native directory selection for direct local exports.
 
+## 🛠️ How to Run
+
+The easiest way to start both the backend (FastAPI) and frontend (React) is using the included script:
+
+```bash
+./start.sh
+```
+
+**Manual Startup:**
+
+1. **Backend** (Port 8000):
+   ```bash
+   uvicorn backend.main:app --reload --port 8000
+   ```
+
+2. **Frontend** (Port 3000):
+   ```bash
+   npm run dev
+   ```
+
 ---
 
 ## 📜 License

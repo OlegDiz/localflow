@@ -62,21 +62,57 @@ const Playground: React.FC<PlaygroundProps> = ({ exampleImages }) => {
     setModelB(prev => ({ ...prev, results: [] }));
   };
 
-  const runInference = (modelKey: 'A' | 'B') => {
+  const blobToBase64 = (url: string): Promise<string> => {
+    return new Promise(async (resolve, reject) => {
+      try {
+        const response = await fetch(url);
+        const blob = await response.blob();
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      } catch (e) {
+        reject(e);
+      }
+    });
+  };
+
+  const runInference = async (modelKey: 'A' | 'B') => {
     if (!image) return;
     const setState = modelKey === 'A' ? setModelA : setModelB;
     const state = modelKey === 'A' ? modelA : modelB;
-    
+
     setState(prev => ({ ...prev, isInferencing: true }));
-    
-    setTimeout(() => {
-      const results: Annotation[] = [
-        { id: `${modelKey}-1`, label: 'person', confidence: 0.94, bbox: { x: 400, y: 100, w: 300, h: 600 }, source: state.model || 'unknown' },
-        { id: `${modelKey}-2`, label: 'detected_object', confidence: 0.65, bbox: { x: 450, y: 250, w: 200, h: 250 }, source: state.model || 'unknown' },
-        { id: `${modelKey}-3`, label: 'detail', confidence: 0.45, bbox: { x: 480, y: 100, w: 120, h: 80 }, source: state.model || 'unknown' }
-      ];
-      setState(prev => ({ ...prev, results, isInferencing: false }));
-    }, 1000 + Math.random() * 1000);
+
+    try {
+      const base64Image = await blobToBase64(image);
+
+      /* 
+         Send to local backend proxy which calls Ollama/LMStudio. 
+         This avoids CORS issues and handles VLM parsing.
+      */
+      const response = await fetch('http://localhost:8000/api/inference', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          backend: state.backend,
+          model: state.model,
+          prompt: state.prompt,
+          image: base64Image,
+          threshold: state.threshold
+        })
+      });
+
+      if (!response.ok) throw new Error('Inference failed');
+
+      const data = await response.json();
+      setState(prev => ({ ...prev, results: data.results, isInferencing: false }));
+
+    } catch (err) {
+      console.error(err);
+      alert('Inference failed. Is the backend running?');
+      setState(prev => ({ ...prev, isInferencing: false }));
+    }
   };
 
   const handleImageLoad = (e: React.SyntheticEvent<HTMLImageElement>) => {
@@ -96,11 +132,11 @@ const Playground: React.FC<PlaygroundProps> = ({ exampleImages }) => {
           </div>
         </div>
         <div className="flex items-center gap-4">
-          <button 
+          <button
             onClick={() => setIsCompareMode(!isCompareMode)}
             className={`flex items-center gap-2 px-3 py-1.5 rounded text-[10px] font-bold uppercase transition-all border ${isCompareMode ? 'bg-app-accent text-white border-app-accent shadow-lg' : 'bg-panel text-app-muted border-app'}`}
           >
-            {isCompareMode ? <LayoutGrid size={14}/> : <SplitSquareVertical size={14}/>}
+            {isCompareMode ? <LayoutGrid size={14} /> : <SplitSquareVertical size={14} />}
             {isCompareMode ? 'Single View' : 'Compare Mode'}
           </button>
         </div>
@@ -108,11 +144,11 @@ const Playground: React.FC<PlaygroundProps> = ({ exampleImages }) => {
 
       <div className="flex-1 flex overflow-hidden">
         {/* Comparison Sidebar A */}
-        <InferenceSidebar 
-          title="Configuration A" 
-          state={modelA} 
-          setState={setModelA} 
-          onRun={() => runInference('A')} 
+        <InferenceSidebar
+          title="Configuration A"
+          state={modelA}
+          setState={setModelA}
+          onRun={() => runInference('A')}
           active={image !== null}
         />
 
@@ -120,12 +156,12 @@ const Playground: React.FC<PlaygroundProps> = ({ exampleImages }) => {
         <div className={`flex-1 bg-stage relative flex flex-col p-6 overflow-hidden`}>
           <div className={`flex-1 flex ${isCompareMode && image ? 'flex-col gap-4' : 'items-center justify-center'} min-h-0`}>
             {!image ? (
-              <div 
+              <div
                 onDragOver={(e) => { e.preventDefault(); setDragActive(true); }}
                 onDragLeave={() => setDragActive(false)}
-                onDrop={(e) => { 
-                  e.preventDefault(); 
-                  setDragActive(false); 
+                onDrop={(e) => {
+                  e.preventDefault();
+                  setDragActive(false);
                   const file = e.dataTransfer.files[0];
                   if (file && file.type.startsWith('image/')) {
                     selectImage(URL.createObjectURL(file));
@@ -162,31 +198,31 @@ const Playground: React.FC<PlaygroundProps> = ({ exampleImages }) => {
 
           {/* Examples Gallery */}
           <div className="mt-6 shrink-0 space-y-3">
-             <div className="flex items-center gap-2 px-1">
-                <Library size={12} className="text-app-muted" />
-                <span className="text-[10px] font-black text-app-muted uppercase tracking-widest">Example Gallery</span>
-             </div>
-             <div className="flex gap-4 overflow-x-auto pb-2 no-scrollbar">
-                {exampleImages.map((img) => (
-                  <button 
-                    key={img.id}
-                    onClick={() => selectImage(img.url)}
-                    className={`group relative shrink-0 w-28 h-20 rounded-lg overflow-hidden border-2 transition-all ${image === img.url ? 'border-app-accent ring-2 ring-app-accent/20' : 'border-app hover:border-app-accent/50'}`}
-                  >
-                    <img src={img.url} className="w-full h-full object-cover" alt={img.name} />
-                  </button>
-                ))}
-             </div>
+            <div className="flex items-center gap-2 px-1">
+              <Library size={12} className="text-app-muted" />
+              <span className="text-[10px] font-black text-app-muted uppercase tracking-widest">Example Gallery</span>
+            </div>
+            <div className="flex gap-4 overflow-x-auto pb-2 no-scrollbar">
+              {exampleImages.map((img) => (
+                <button
+                  key={img.id}
+                  onClick={() => selectImage(img.url)}
+                  className={`group relative shrink-0 w-28 h-20 rounded-lg overflow-hidden border-2 transition-all ${image === img.url ? 'border-app-accent ring-2 ring-app-accent/20' : 'border-app hover:border-app-accent/50'}`}
+                >
+                  <img src={img.url} className="w-full h-full object-cover" alt={img.name} />
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 
         {/* Comparison Sidebar B (Only in Compare Mode) */}
         {isCompareMode && (
-          <InferenceSidebar 
-            title="Configuration B" 
-            state={modelB} 
-            setState={setModelB} 
-            onRun={() => runInference('B')} 
+          <InferenceSidebar
+            title="Configuration B"
+            state={modelB}
+            setState={setModelB}
+            onRun={() => runInference('B')}
             active={image !== null}
             variant="right"
           />
@@ -229,14 +265,14 @@ const InferenceSidebar = ({ title, state, setState, onRun, active, variant = 'le
   return (
     <div className={`w-80 border-${variant === 'left' ? 'r' : 'l'} border-app p-6 flex flex-col gap-6 bg-sidebar/20 shrink-0`}>
       <div className="flex items-center gap-2 border-b border-app pb-3">
-        <Settings2 size={14} className="text-app-muted"/>
+        <Settings2 size={14} className="text-app-muted" />
         <span className="text-[10px] font-black text-app-muted uppercase tracking-[0.2em]">{title}</span>
       </div>
-      
+
       <div className="space-y-5 flex-1 overflow-y-auto no-scrollbar">
         <div className="space-y-2">
           <label className="text-[10px] font-bold text-app-muted uppercase tracking-wider">Provider</label>
-          <select 
+          <select
             value={state.backend}
             onChange={(e) => setState({ ...state, backend: e.target.value as ModelBackend, model: '' })}
             className="w-full bg-panel border border-app rounded-lg px-3 py-2 text-sm text-app outline-none focus:border-app-accent transition-colors font-semibold"
@@ -254,7 +290,7 @@ const InferenceSidebar = ({ title, state, setState, onRun, active, variant = 'le
               <RefreshCw size={10} />
             </button>
           </div>
-          <select 
+          <select
             value={state.model}
             onChange={(e) => setState({ ...state, model: e.target.value })}
             className="w-full bg-panel border border-app rounded-lg px-3 py-2 text-sm text-app outline-none focus:border-app-accent transition-colors font-mono text-[11px]"
@@ -269,8 +305,8 @@ const InferenceSidebar = ({ title, state, setState, onRun, active, variant = 'le
             <label className="text-[10px] font-bold text-app-muted uppercase tracking-wider">Confidence Threshold</label>
             <span className="text-[10px] font-mono text-app-accent">{Math.round(state.threshold * 100)}%</span>
           </div>
-          <input 
-            type="range" min="0" max="1" step="0.01" 
+          <input
+            type="range" min="0" max="1" step="0.01"
             value={state.threshold}
             onChange={(e) => setState({ ...state, threshold: parseFloat(e.target.value) })}
             className="w-full accent-indigo-500 h-1 bg-panel rounded-full appearance-none border border-app cursor-pointer"
@@ -279,7 +315,7 @@ const InferenceSidebar = ({ title, state, setState, onRun, active, variant = 'le
 
         <div className="space-y-2">
           <label className="text-[10px] font-bold text-app-muted uppercase tracking-wider">Zero-Shot Target</label>
-          <textarea 
+          <textarea
             value={state.prompt}
             onChange={(e) => setState({ ...state, prompt: e.target.value })}
             className="w-full bg-panel border border-app rounded-lg px-3 py-2 text-sm text-app outline-none focus:border-app-accent h-24 resize-none font-mono text-[11px] leading-tight"
@@ -293,12 +329,11 @@ const InferenceSidebar = ({ title, state, setState, onRun, active, variant = 'le
         </div>
       </div>
 
-      <button 
+      <button
         onClick={onRun}
         disabled={!active || state.isInferencing || (!state.model && state.backend !== ModelBackend.Mock)}
-        className={`w-full py-3 rounded-xl font-bold text-sm tracking-wide transition-all flex items-center justify-center gap-2 ${
-          !active || state.isInferencing || (!state.model && state.backend !== ModelBackend.Mock) ? 'bg-panel text-app-muted cursor-not-allowed' : 'bg-app-accent text-white hover:brightness-110 shadow-lg active:scale-[0.98]'
-        }`}
+        className={`w-full py-3 rounded-xl font-bold text-sm tracking-wide transition-all flex items-center justify-center gap-2 ${!active || state.isInferencing || (!state.model && state.backend !== ModelBackend.Mock) ? 'bg-panel text-app-muted cursor-not-allowed' : 'bg-app-accent text-white hover:brightness-110 shadow-lg active:scale-[0.98]'
+          }`}
       >
         {state.isInferencing ? <RefreshCw size={14} className="animate-spin" /> : <Zap size={14} fill="currentColor" />}
         {state.isInferencing ? 'INFERRING...' : 'TEST INFERENCE'}

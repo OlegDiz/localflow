@@ -1,14 +1,14 @@
 
 import React, { useState, useEffect } from 'react';
-import { 
-  UploadCloud, 
-  Zap, 
-  Trash2, 
-  CheckCircle2, 
-  Circle, 
-  RefreshCw, 
-  Settings, 
-  BrainCircuit, 
+import {
+  UploadCloud,
+  Zap,
+  Trash2,
+  CheckCircle2,
+  Circle,
+  RefreshCw,
+  Settings,
+  BrainCircuit,
   Loader2,
   ExternalLink,
   ChevronRight,
@@ -85,15 +85,15 @@ const Annotator: React.FC<AnnotatorProps> = ({ project, setProject }) => {
   const runBatchAnnotation = async () => {
     if (!selectedModel || project.images.length === 0) return;
     setIsProcessing(true);
-    
+
     for (let i = 0; i < project.images.length; i++) {
       if (project.images[i].status === 'labeled') continue;
       await new Promise(r => setTimeout(r, 800));
-      
+
       setProject(prev => {
         const newImages = [...prev.images];
-        newImages[i] = { 
-          ...newImages[i], 
+        newImages[i] = {
+          ...newImages[i],
           status: 'labeled',
           annotations: [
             { id: `auto-${Math.random()}`, label: 'detected_object', confidence: 0.89, bbox: { x: 200, y: 150, w: 300, h: 400 }, source: selectedModel }
@@ -107,11 +107,44 @@ const Annotator: React.FC<AnnotatorProps> = ({ project, setProject }) => {
 
   const handleExport = async () => {
     setIsExporting(true);
-    // Simulate generation of directory structure and ZIP
-    await new Promise(r => setTimeout(r, 2000));
-    console.log(`Exporting to ${exportPath} in ${yoloVersion} format...`);
-    setIsExporting(false);
-    alert(`Dataset successfully formatted for ${yoloVersion} and exported to ${exportPath}`);
+    try {
+      const payload = {
+        path: exportPath,
+        classes: project.classes, // Note: project.classes might be empty if not managed, assuming it is populated
+        images: project.images,
+        format: yoloVersion
+      };
+
+      // Ensure we have classes if not set (auto-detect from annotations)
+      if (payload.classes.length === 0) {
+        const uniqueLabels = new Set<string>();
+        project.images.forEach(img =>
+          img.annotations.forEach(a => uniqueLabels.add(a.label))
+        );
+        payload.classes = Array.from(uniqueLabels);
+      }
+
+      const response = await fetch('http://localhost:8000/api/export', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (!response.ok) {
+        throw new Error(`Export failed: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      console.log('Export success:', data);
+      alert(`Dataset successfully exported to ${data.path}`);
+    } catch (err) {
+      console.error('Export error:', err);
+      alert('Failed to export dataset. Is the backend server running?');
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   const selectDirectory = async () => {
@@ -145,19 +178,19 @@ const Annotator: React.FC<AnnotatorProps> = ({ project, setProject }) => {
           </div>
 
           <div className="flex items-center gap-3">
-             <button 
-                onClick={() => setProject(prev => ({...prev, images: []}))}
-                className="px-4 py-2 text-[10px] font-bold text-red-500 bg-red-50 border border-red-100 rounded-lg hover:bg-red-100 transition-all uppercase tracking-wider"
-             >
-                Reset Workspace
-             </button>
+            <button
+              onClick={() => setProject(prev => ({ ...prev, images: [] }))}
+              className="px-4 py-2 text-[10px] font-bold text-red-500 bg-red-50 border border-red-100 rounded-lg hover:bg-red-100 transition-all uppercase tracking-wider"
+            >
+              Reset Workspace
+            </button>
           </div>
         </header>
 
         {/* Content Area */}
         <div className="flex-1 overflow-y-auto p-8 no-scrollbar">
           {project.images.length === 0 ? (
-            <div 
+            <div
               onDragOver={(e) => { e.preventDefault(); setDragActive(true); }}
               onDragLeave={() => setDragActive(false)}
               onDrop={(e) => { e.preventDefault(); setDragActive(false); handleFileUpload(e.dataTransfer.files); }}
@@ -220,17 +253,17 @@ const Annotator: React.FC<AnnotatorProps> = ({ project, setProject }) => {
         {/* Model Config Section */}
         <div className="p-6 border-b border-app">
           <h2 className="text-[10px] font-black text-app-muted uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
-            <Settings size={12}/> Model Configurator
+            <Settings size={12} /> Model Configurator
           </h2>
-          
+
           <div className="grid grid-cols-2 gap-2 p-1 bg-panel border border-app rounded-xl mb-4">
-            <button 
+            <button
               onClick={() => setSelectedProvider(ModelBackend.Ollama)}
               className={`py-2 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all ${selectedProvider === ModelBackend.Ollama ? 'bg-app-accent text-white shadow-md' : 'text-app-muted hover:text-app'}`}
             >
               Ollama
             </button>
-            <button 
+            <button
               onClick={() => setSelectedProvider(ModelBackend.LMStudio)}
               className={`py-2 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all ${selectedProvider === ModelBackend.LMStudio ? 'bg-app-accent text-white shadow-md' : 'text-app-muted hover:text-app'}`}
             >
@@ -245,11 +278,11 @@ const Annotator: React.FC<AnnotatorProps> = ({ project, setProject }) => {
                 <RefreshCw size={14} />
               </button>
             </div>
-            
+
             {availableModels.length > 0 ? (
               <div className="space-y-2">
                 {availableModels.map(model => (
-                  <button 
+                  <button
                     key={model}
                     onClick={() => setSelectedModel(model)}
                     className={`w-full flex items-center justify-between px-4 py-3 rounded-xl border text-xs font-bold transition-all ${selectedModel === model ? 'bg-indigo-50 border-app-accent text-app-accent' : 'bg-panel border-app text-app-muted hover:border-app-accent/50'}`}
@@ -269,25 +302,24 @@ const Annotator: React.FC<AnnotatorProps> = ({ project, setProject }) => {
 
         {/* Vision Instruction Section */}
         <div className="p-6 border-b border-app space-y-4">
-            <label className="text-[10px] font-bold text-app-muted uppercase tracking-wider">Labeling Instructions</label>
-            <textarea 
-                value={targetPrompt}
-                onChange={(e) => setTargetPrompt(e.target.value)}
-                placeholder="What objects should be labeled?"
-                className="w-full bg-panel border border-app rounded-2xl p-4 text-xs text-app font-medium outline-none focus:border-app-accent h-24 resize-none shadow-inner"
-            />
-            <button 
-                onClick={runBatchAnnotation}
-                disabled={!selectedModel || project.images.length === 0 || isProcessing}
-                className={`w-full py-3 rounded-xl font-black text-[10px] tracking-widest uppercase transition-all flex items-center justify-center gap-2 ${
-                isProcessing || !selectedModel || project.images.length === 0
-                    ? 'bg-panel border border-app text-app-muted cursor-not-allowed opacity-60'
-                    : 'bg-app-accent text-white hover:brightness-110 shadow-lg'
-                }`}
-            >
-                {isProcessing ? <Loader2 size={14} className="animate-spin" /> : <Zap size={14} fill="currentColor" />}
-                {isProcessing ? 'Processing Batch...' : 'Run Auto-Labeling'}
-            </button>
+          <label className="text-[10px] font-bold text-app-muted uppercase tracking-wider">Labeling Instructions</label>
+          <textarea
+            value={targetPrompt}
+            onChange={(e) => setTargetPrompt(e.target.value)}
+            placeholder="What objects should be labeled?"
+            className="w-full bg-panel border border-app rounded-2xl p-4 text-xs text-app font-medium outline-none focus:border-app-accent h-24 resize-none shadow-inner"
+          />
+          <button
+            onClick={runBatchAnnotation}
+            disabled={!selectedModel || project.images.length === 0 || isProcessing}
+            className={`w-full py-3 rounded-xl font-black text-[10px] tracking-widest uppercase transition-all flex items-center justify-center gap-2 ${isProcessing || !selectedModel || project.images.length === 0
+                ? 'bg-panel border border-app text-app-muted cursor-not-allowed opacity-60'
+                : 'bg-app-accent text-white hover:brightness-110 shadow-lg'
+              }`}
+          >
+            {isProcessing ? <Loader2 size={14} className="animate-spin" /> : <Zap size={14} fill="currentColor" />}
+            {isProcessing ? 'Processing Batch...' : 'Run Auto-Labeling'}
+          </button>
         </div>
 
         {/* Export Configuration Section */}
@@ -303,7 +335,7 @@ const Annotator: React.FC<AnnotatorProps> = ({ project, setProject }) => {
             </label>
             <div className="flex gap-2">
               <div className="relative flex-1">
-                <input 
+                <input
                   type="text"
                   value={exportPath}
                   onChange={(e) => setExportPath(e.target.value)}
@@ -312,7 +344,7 @@ const Annotator: React.FC<AnnotatorProps> = ({ project, setProject }) => {
                 />
                 <Folder size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-app-muted pointer-events-none" />
               </div>
-              <button 
+              <button
                 onClick={selectDirectory}
                 className="px-4 bg-panel border border-app rounded-xl text-app-muted hover:text-app hover:border-app-accent transition-all group flex items-center justify-center"
                 title="Select Directory"
@@ -327,13 +359,13 @@ const Annotator: React.FC<AnnotatorProps> = ({ project, setProject }) => {
               <FileJson size={12} /> Dataset Format
             </label>
             <div className="grid grid-cols-2 gap-2 p-1 bg-panel border border-app rounded-xl">
-              <button 
+              <button
                 onClick={() => setYoloVersion('YOLOv8')}
                 className={`py-2 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all ${yoloVersion === 'YOLOv8' ? 'bg-indigo-100 text-app-accent shadow-sm' : 'text-app-muted hover:text-app'}`}
               >
                 YOLOv8
               </button>
-              <button 
+              <button
                 onClick={() => setYoloVersion('YOLOv11')}
                 className={`py-2 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all ${yoloVersion === 'YOLOv11' ? 'bg-indigo-100 text-app-accent shadow-sm' : 'text-app-muted hover:text-app'}`}
               >
@@ -345,14 +377,13 @@ const Annotator: React.FC<AnnotatorProps> = ({ project, setProject }) => {
             </p>
           </div>
 
-          <button 
+          <button
             onClick={handleExport}
             disabled={project.images.filter(i => i.status === 'labeled').length === 0 || isExporting}
-            className={`w-full py-4 rounded-2xl font-black text-xs tracking-widest uppercase transition-all flex items-center justify-center gap-3 shadow-xl ${
-              isExporting || project.images.filter(i => i.status === 'labeled').length === 0
+            className={`w-full py-4 rounded-2xl font-black text-xs tracking-widest uppercase transition-all flex items-center justify-center gap-3 shadow-xl ${isExporting || project.images.filter(i => i.status === 'labeled').length === 0
                 ? 'bg-panel border border-app text-app-muted cursor-not-allowed opacity-60'
                 : 'bg-green-600 text-white hover:brightness-110 active:scale-[0.98]'
-            }`}
+              }`}
           >
             {isExporting ? (
               <>
@@ -366,12 +397,12 @@ const Annotator: React.FC<AnnotatorProps> = ({ project, setProject }) => {
               </>
             )}
           </button>
-          
+
           <div className="p-4 bg-panel border border-app border-dashed rounded-xl space-y-2">
-             <div className="flex justify-between items-center text-[10px] font-bold">
-                <span className="text-app-muted uppercase">Ready for export</span>
-                <span className="text-green-600 font-black">{project.images.filter(i => i.status === 'labeled').length} Images</span>
-             </div>
+            <div className="flex justify-between items-center text-[10px] font-bold">
+              <span className="text-app-muted uppercase">Ready for export</span>
+              <span className="text-green-600 font-black">{project.images.filter(i => i.status === 'labeled').length} Images</span>
+            </div>
           </div>
         </div>
       </aside>
