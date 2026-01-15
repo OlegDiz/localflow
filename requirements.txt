@@ -1,0 +1,7 @@
+reflex
+dill>=0.3.8
+requests>=2.31.0
+PyYAML
+Pillow
+
+reflex==0.8.25

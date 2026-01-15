@@ -44,25 +44,41 @@ Launch this framework in your browser. LocalFlow will automatically attempt to h
 - **Inference Playground**: Compare dual-inference results side-by-side.
 - **Privacy Native**: 100% local. Your data never leaves your machine.
 
-## 🛠️ How to Run
+## 🛠️ How to Run (Python-Only Reflex)
 
-The easiest way to start both the backend (FastAPI) and frontend (React) is using the included script:
+LocalFlow now runs as a Python-only Reflex web app.
 
-```bash
-./start.sh
-```
-
-**Manual Startup:**
-
-1. **Backend** (Port 8000):
+1. **Install dependencies**:
    ```bash
-   uvicorn backend.main:app --reload --port 8000
+   pip install -r requirements.txt
    ```
 
-2. **Frontend** (Port 3000):
+2. **Start the app** (Frontend + Backend):
    ```bash
-   npm run dev
+   reflex run
    ```
+
+The app will start the backend on port 8000 and the frontend on port 3000 by default.
+
+### Local VLM Providers
+LocalFlow does not launch Ollama or LM Studio for you. It only connects to HTTP servers you already started.
+
+1. **Copy and edit the env file**:
+   ```bash
+   cp .env.example .env
+   ```
+2. **Set provider configuration**:
+   ```text
+   LLM_PROVIDER=auto
+   OLLAMA_BASE_URL=http://127.0.0.1:11434
+   LMSTUDIO_BASE_URL=http://127.0.0.1:1234
+   ```
+
+LocalFlow will probe the configured URLs at startup:
+* **Ollama**: `GET /api/tags`
+* **LM Studio**: `GET /v1/models`
+
+If the required provider is not reachable, the app will fail fast with a clear error message.
 
 ---
 

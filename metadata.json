@@ -1,7 +1,0 @@
-{
-  "name": "LocalFlow",
-  "description": "A high-performance local-first computer vision studio for image annotation, model testing, and YOLO dataset orchestration.",
-  "requestFramePermissions": [
-    "camera"
-  ]
-}
